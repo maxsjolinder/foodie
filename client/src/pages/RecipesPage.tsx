@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getRecipes, getIngredients, getUnits, createRecipe, deleteRecipe } from '../services/api';
+import { getRecipes, getIngredients, getUnits, createRecipe, updateRecipe, deleteRecipe } from '../services/api';
 import { Recipe, Ingredient, Unit } from '../services/types';
 import RecipeForm from '../components/RecipeForm';
 
@@ -34,14 +34,24 @@ function RecipesPage() {
     }
   };
 
-  const handleCreate = async (data: any) => {
+  const handleSubmit = async (data: any) => {
     try {
-      await createRecipe(data);
+      if (selectedRecipe) {
+        await updateRecipe(selectedRecipe.id, data);
+      } else {
+        await createRecipe(data);
+      }
       setShowForm(false);
+      setSelectedRecipe(null);
       loadData();
     } catch (error) {
-      console.error('Error creating recipe:', error);
+      console.error('Error saving recipe:', error);
     }
+  };
+
+  const handleEdit = (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    setShowForm(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -65,8 +75,13 @@ function RecipesPage() {
         <h1 className="text-3xl font-bold text-gray-800">{t('recipes.title')}</h1>
         <button
           onClick={() => {
-            setSelectedRecipe(null);
-            setShowForm(!showForm);
+            if (showForm) {
+              setShowForm(false);
+              setSelectedRecipe(null);
+            } else {
+              setSelectedRecipe(null);
+              setShowForm(true);
+            }
           }}
           className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
         >
@@ -76,12 +91,18 @@ function RecipesPage() {
 
       {showForm && (
         <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            {selectedRecipe ? t('recipes.edit') : t('recipes.createNew')}
+          </h2>
           <RecipeForm
             ingredients={ingredients}
             units={units}
             recipe={selectedRecipe || undefined}
-            onSubmit={handleCreate}
-            onCancel={() => setShowForm(false)}
+            onSubmit={handleSubmit}
+            onCancel={() => {
+              setShowForm(false);
+              setSelectedRecipe(null);
+            }}
           />
         </div>
       )}
@@ -126,12 +147,20 @@ function RecipesPage() {
                   </ul>
                 </div>
 
-                <button
-                  onClick={() => handleDelete(recipe.id)}
-                  className="w-full text-center text-red-600 hover:text-red-800 text-sm py-2 border border-red-300 rounded hover:bg-red-50"
-                >
-                  {t('recipes.delete')}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(recipe)}
+                    className="flex-1 text-center text-green-600 hover:text-green-800 text-sm py-2 border border-green-300 rounded hover:bg-green-50"
+                  >
+                    {t('recipes.edit')}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(recipe.id)}
+                    className="flex-1 text-center text-red-600 hover:text-red-800 text-sm py-2 border border-red-300 rounded hover:bg-red-50"
+                  >
+                    {t('recipes.delete')}
+                  </button>
+                </div>
               </div>
             </div>
           ))
