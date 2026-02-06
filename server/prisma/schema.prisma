@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Unit {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique // e.g., "g", "kg", "ml", "l", "st", "msk", "tsk", "dl"
+  displayName     String   // Swedish display name
+  unitType        String   // "weight", "volume", "count"
+  conversionToBase Float   // Conversion factor to base unit (g for weight, ml for volume, 1 for count)
+  createdAt       DateTime @default(now())
+
+  ingredients       Ingredient[]
+  recipeIngredients RecipeIngredient[]
+
+  @@map("units")
+}
+
+model Ingredient {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  defaultUnit Unit     @relation(fields: [defaultUnitId], references: [id])
+  defaultUnitId Int
+  createdAt   DateTime @default(now())
+
+  recipes     RecipeIngredient[]
+
+  @@map("ingredients")
+}
+
+model Recipe {
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String?
+  instructions    String?
+  prepTimeMinutes Int?
+  cookTimeMinutes Int?
+  servings        Int      @default(2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ingredients RecipeIngredient[]
+  mealPlans   MealPlan[]
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id           Int        @id @default(autoincrement())
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId     Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredientId Int
+  quantity     Float
+  unit         Unit       @relation(fields: [unitId], references: [id])
+  unitId       Int
+  createdAt    DateTime   @default(now())
+
+  @@map("recipe_ingredients")
+}
+
+model MealType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // e.g., "Lunch", "Middag", "Frukost"
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  mealPlans MealPlan[]
+
+  @@map("meal_types")
+}
+
+model MealPlan {
+  id          Int       @id @default(autoincrement())
+  recipe      Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId    Int
+  mealType    MealType  @relation(fields: [mealTypeId], references: [id])
+  mealTypeId  Int
+  plannedDate DateTime  @db.Date
+  weekNumber  Int
+  year        Int
+  isCooked    Boolean   @default(false)
+  cookedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([plannedDate])
+  @@index([weekNumber, year])
+  @@map("meal_plans")
+}

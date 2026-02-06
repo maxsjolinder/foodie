@@ -1,0 +1,83 @@
+{
+  "app": {
+    "title": "Foodie",
+    "subtitle": "Måltidsplanering för familjen"
+  },
+  "nav": {
+    "recipes": "Recept",
+    "planning": "Planering",
+    "grocery": "Inköpslista",
+    "ingredients": "Ingredienser"
+  },
+  "recipes": {
+    "title": "Recept",
+    "createNew": "Skapa nytt recept",
+    "edit": "Redigera recept",
+    "delete": "Ta bort recept",
+    "deleteConfirm": "Är du säker på att du vill ta bort detta recept?",
+    "name": "Namn",
+    "description": "Beskrivning",
+    "instructions": "Instruktioner",
+    "prepTime": "Förberedelsetid (min)",
+    "cookTime": "Tillagningstid (min)",
+    "servings": "Portioner",
+    "ingredients": "Ingredienser",
+    "addIngredient": "Lägg till ingrediens",
+    "removeIngredient": "Ta bort",
+    "quantity": "Mängd",
+    "unit": "Enhet",
+    "save": "Spara",
+    "cancel": "Avbryt",
+    "noRecipes": "Inga recept ännu. Skapa ditt första recept!"
+  },
+  "planning": {
+    "title": "Måltidsplanering",
+    "week": "Vecka",
+    "previousWeek": "Föregående vecka",
+    "nextWeek": "Nästa vecka",
+    "currentWeek": "Nuvarande vecka",
+    "selectRecipe": "Välj recept",
+    "noMeal": "Ingen måltid planerad",
+    "addMeal": "Lägg till måltid",
+    "markCooked": "Markera som lagad",
+    "markNotCooked": "Markera som ej lagad",
+    "cooked": "Lagad",
+    "removeMeal": "Ta bort måltid",
+    "monday": "Måndag",
+    "tuesday": "Tisdag",
+    "wednesday": "Onsdag",
+    "thursday": "Torsdag",
+    "friday": "Fredag",
+    "saturday": "Lördag",
+    "sunday": "Söndag"
+  },
+  "grocery": {
+    "title": "Inköpslista",
+    "selectWeek": "Välj vecka",
+    "noItems": "Inga ingredienser för denna vecka. Lägg till måltider i planeringen!",
+    "print": "Skriv ut",
+    "week": "Vecka"
+  },
+  "ingredients": {
+    "title": "Ingredienser",
+    "createNew": "Skapa ny ingrediens",
+    "edit": "Redigera ingrediens",
+    "delete": "Ta bort ingrediens",
+    "deleteConfirm": "Är du säker på att du vill ta bort denna ingrediens?",
+    "name": "Namn",
+    "defaultUnit": "Standardenhet",
+    "save": "Spara",
+    "cancel": "Avbryt",
+    "noIngredients": "Inga ingredienser ännu. Skapa din första ingrediens!"
+  },
+  "common": {
+    "loading": "Laddar...",
+    "error": "Ett fel uppstod",
+    "success": "Lyckades!",
+    "confirm": "Bekräfta",
+    "yes": "Ja",
+    "no": "Nej",
+    "close": "Stäng",
+    "search": "Sök"
+  }
+}
