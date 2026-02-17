@@ -4,6 +4,17 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
+// Normalize a meal plan from Prisma so plannedDate is always "YYYY-MM-DD"
+// Prisma returns DateTime fields as JS Date objects which serialize to full ISO
+// strings (e.g. "2026-02-06T00:00:00.000Z"), breaking simple string comparisons
+// on the frontend.
+function normalizeMealPlan(mp: any) {
+  return {
+    ...mp,
+    plannedDate: (mp.plannedDate as Date).toISOString().split('T')[0],
+  };
+}
+
 // Helper to get week number and year from a date
 function getWeekData(date: Date) {
   const startOfYear = new Date(date.getFullYear(), 0, 1);
@@ -52,7 +63,7 @@ router.get('/', async (req: Request, res: Response) => {
       ],
     });
 
-    res.json(mealPlans);
+    res.json(mealPlans.map(normalizeMealPlan));
   } catch (error) {
     console.error('Error fetching meal plans:', error);
     res.status(500).json({ error: 'Failed to fetch meal plans' });
@@ -90,7 +101,7 @@ router.post('/', async (req: Request, res: Response) => {
       },
     });
 
-    res.status(201).json(mealPlan);
+    res.status(201).json(normalizeMealPlan(mealPlan));
   } catch (error) {
     console.error('Error creating meal plan:', error);
     res.status(500).json({ error: 'Failed to create meal plan' });
@@ -130,7 +141,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       },
     });
 
-    res.json(mealPlan);
+    res.json(normalizeMealPlan(mealPlan));
   } catch (error) {
     console.error('Error updating meal plan:', error);
     res.status(500).json({ error: 'Failed to update meal plan' });
