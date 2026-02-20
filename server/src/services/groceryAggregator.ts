@@ -66,8 +66,10 @@ export async function generateGroceryList(weekStart: Date): Promise<GroceryItem[
         });
       }
 
+      // Scale quantity by portions / recipe.servings
+      const scale = mealPlan.portions / mealPlan.recipe.servings;
       ingredientMap.get(ingredientId)!.items.push({
-        quantity: recipeIngredient.quantity,
+        quantity: recipeIngredient.quantity * scale,
         unit: recipeIngredient.unit,
       });
     }

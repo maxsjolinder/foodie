@@ -23,6 +23,8 @@ function PlanningPage() {
   const [loading, setLoading] = useState(true);
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date; mealTypeId: number } | null>(null);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
+  const [portions, setPortions] = useState<number>(2);
 
   useEffect(() => {
     loadData();
@@ -59,17 +61,25 @@ function PlanningPage() {
     setShowRecipeSelector(true);
   };
 
-  const handleSelectRecipe = async (recipeId: number) => {
-    if (!selectedSlot) return;
+  const handlePickRecipe = (recipe: Recipe) => {
+    setSelectedRecipeId(recipe.id);
+    setPortions(recipe.servings);
+  };
+
+  const handleConfirmMeal = async () => {
+    if (!selectedSlot || !selectedRecipeId) return;
 
     try {
       await createMealPlan({
-        recipeId,
+        recipeId: selectedRecipeId,
         mealTypeId: selectedSlot.mealTypeId,
         plannedDate: format(selectedSlot.date, 'yyyy-MM-dd'),
+        portions,
       });
       setShowRecipeSelector(false);
       setSelectedSlot(null);
+      setSelectedRecipeId(null);
+      setPortions(2);
       loadData();
     } catch (error) {
       console.error('Error creating meal plan:', error);
@@ -206,6 +216,9 @@ function PlanningPage() {
                                     <div className="text-sm font-medium text-gray-800">
                                       {meal.recipe.name}
                                     </div>
+                                    <div className="text-xs text-gray-500">
+                                      {meal.portions} {t('planning.portions')}
+                                    </div>
                                     <div className="flex items-center space-x-2 mt-1">
                                       <button
                                         onClick={() => handleToggleCooked(meal)}
@@ -250,13 +263,15 @@ function PlanningPage() {
       {/* Recipe Selector Modal */}
       {showRecipeSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">{t('planning.selectRecipe')}</h2>
               <button
                 onClick={() => {
                   setShowRecipeSelector(false);
                   setSelectedSlot(null);
+                  setSelectedRecipeId(null);
+                  setPortions(2);
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -264,25 +279,67 @@ function PlanningPage() {
               </button>
             </div>
 
-            <div className="space-y-2">
-              {recipes.map((recipe) => (
-                <button
-                  key={recipe.id}
-                  onClick={() => handleSelectRecipe(recipe.id)}
-                  className="w-full text-left p-3 border rounded hover:bg-gray-50"
-                >
-                  <div className="font-medium text-gray-800">{recipe.name}</div>
-                  {recipe.description && (
-                    <div className="text-sm text-gray-600 mt-1">{recipe.description}</div>
-                  )}
-                  <div className="flex gap-2 text-xs text-gray-500 mt-2">
-                    {recipe.prepTimeMinutes && <span>⏱️ {recipe.prepTimeMinutes}min</span>}
-                    {recipe.cookTimeMinutes && <span>🔥 {recipe.cookTimeMinutes}min</span>}
-                    <span>👥 {recipe.servings}</span>
-                  </div>
-                </button>
-              ))}
+            {/* Recipe list */}
+            <div className="overflow-y-auto flex-1 space-y-2 mb-4">
+              {recipes.map((recipe) => {
+                const isSelected = recipe.id === selectedRecipeId;
+                return (
+                  <button
+                    key={recipe.id}
+                    onClick={() => handlePickRecipe(recipe)}
+                    className={`w-full text-left p-3 border rounded transition-colors ${
+                      isSelected
+                        ? 'border-green-500 bg-green-50'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-800">{recipe.name}</div>
+                    {recipe.description && (
+                      <div className="text-sm text-gray-600 mt-1">{recipe.description}</div>
+                    )}
+                    <div className="flex gap-2 text-xs text-gray-500 mt-2">
+                      {recipe.prepTimeMinutes && <span>⏱️ {recipe.prepTimeMinutes}min</span>}
+                      {recipe.cookTimeMinutes && <span>🔥 {recipe.cookTimeMinutes}min</span>}
+                      <span>👥 {recipe.servings} {t('planning.portions')}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Portions selector + confirm — shown once a recipe is picked */}
+            {selectedRecipeId && (
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700">
+                      {t('planning.portionsLabel')}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPortions(Math.max(1, portions - 1))}
+                        className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 font-bold text-lg leading-none"
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center font-semibold text-lg">{portions}</span>
+                      <button
+                        onClick={() => setPortions(portions + 1)}
+                        className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 font-bold text-lg leading-none"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleConfirmMeal}
+                    className="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 font-medium"
+                  >
+                    {t('planning.addMeal')} ✓
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

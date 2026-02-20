@@ -49,7 +49,9 @@
     "thursday": "Torsdag",
     "friday": "Fredag",
     "saturday": "Lördag",
-    "sunday": "Söndag"
+    "sunday": "Söndag",
+    "portions": "portioner",
+    "portionsLabel": "Antal portioner"
   },
   "grocery": {
     "title": "Inköpslista",

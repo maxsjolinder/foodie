@@ -73,7 +73,7 @@ router.get('/', async (req: Request, res: Response) => {
 // POST /api/meal-plans - Create meal plan entry
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { recipeId, mealTypeId, plannedDate } = req.body;
+    const { recipeId, mealTypeId, plannedDate, portions } = req.body;
 
     const date = new Date(plannedDate);
     const { weekNumber, year } = getWeekData(date);
@@ -85,6 +85,7 @@ router.post('/', async (req: Request, res: Response) => {
         plannedDate: date,
         weekNumber,
         year,
+        portions: portions ?? 2,
       },
       include: {
         recipe: {
@@ -112,7 +113,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { recipeId, mealTypeId, plannedDate } = req.body;
+    const { recipeId, mealTypeId, plannedDate, portions } = req.body;
 
     const date = new Date(plannedDate);
     const { weekNumber, year } = getWeekData(date);
@@ -125,6 +126,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         plannedDate: date,
         weekNumber,
         year,
+        portions: portions ?? 2,
       },
       include: {
         recipe: {

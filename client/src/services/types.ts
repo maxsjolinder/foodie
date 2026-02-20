@@ -55,6 +55,7 @@ export interface MealPlan {
   plannedDate: string;
   weekNumber: number;
   year: number;
+  portions: number;
   isCooked: boolean;
   cookedAt?: string;
   createdAt: string;
@@ -86,6 +87,7 @@ export interface CreateMealPlanInput {
   recipeId: number;
   mealTypeId: number;
   plannedDate: string;
+  portions: number;
 }
 
 export interface CreateIngredientInput {

@@ -87,6 +87,7 @@ model MealPlan {
   plannedDate DateTime  @db.Date
   weekNumber  Int
   year        Int
+  portions    Int       @default(2)
   isCooked    Boolean   @default(false)
   cookedAt    DateTime?
   createdAt   DateTime  @default(now())
