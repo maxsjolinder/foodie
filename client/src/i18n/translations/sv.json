@@ -80,6 +80,8 @@
     "yes": "Ja",
     "no": "Nej",
     "close": "Stäng",
-    "search": "Sök"
+    "search": "Sök",
+    "save": "Spara",
+    "cancel": "Avbryt"
   }
 }
