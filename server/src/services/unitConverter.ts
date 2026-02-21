@@ -78,7 +78,8 @@ export function findBestDisplayUnit(
  */
 export function aggregateQuantities(
   items: Array<{ quantity: number; unit: Unit }>,
-  allUnits: Unit[]
+  allUnits: Unit[],
+  ingredientName?: string
 ): ConversionResult {
   if (items.length === 0) {
     throw new Error('No items to aggregate');
@@ -89,8 +90,9 @@ export function aggregateQuantities(
   // Convert all to base unit and sum
   const totalInBase = items.reduce((sum, item) => {
     if (item.unit.unitType !== unitType) {
+      const ingredientInfo = ingredientName ? ` for ingredient "${ingredientName}"` : '';
       throw new Error(
-        `All items must have the same unit type. Found ${item.unit.unitType} but expected ${unitType}`
+        `All items must have the same unit type${ingredientInfo}. Found ${item.unit.unitType} but expected ${unitType} (unit: ${item.unit.name})`
       );
     }
     return sum + toBaseUnit(item.quantity, item.unit);

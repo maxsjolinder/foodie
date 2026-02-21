@@ -80,7 +80,7 @@ export async function generateGroceryList(weekStart: Date): Promise<GroceryItem[
 
   for (const [ingredientId, data] of ingredientMap.entries()) {
     try {
-      const aggregated = aggregateQuantities(data.items, allUnits);
+      const aggregated = aggregateQuantities(data.items, allUnits, data.name);
 
       groceryList.push({
         ingredientId,
@@ -90,7 +90,7 @@ export async function generateGroceryList(weekStart: Date): Promise<GroceryItem[
         unitDisplayName: aggregated.unit.displayName,
       });
     } catch (error) {
-      console.error(`Error aggregating ingredient ${ingredientId}:`, error);
+      console.error(`Error aggregating ingredient "${data.name}" (ID: ${ingredientId}):`, error);
       // If aggregation fails, sum quantities without conversion
       const totalQuantity = data.items.reduce((sum, item) => sum + item.quantity, 0);
       groceryList.push({

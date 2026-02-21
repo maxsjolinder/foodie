@@ -117,4 +117,84 @@ router.post('/extract-from-photo', upload.single('photo'), async (req: Request, 
   }
 });
 
+// POST /api/recipes/extract-from-photos (multiple files) - for AI method only
+router.post('/extract-from-photos', upload.array('photos', 5), async (req: Request, res: Response) => {
+  try {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'No image files provided' });
+    }
+
+    const method = (req.query.method as string) || 'ai';
+    console.log(`Processing ${files.length} images with ${method.toUpperCase()}`);
+
+    if (method !== 'ai') {
+      return res.status(400).json({
+        error: 'Multiple file upload is only supported with AI extraction method',
+      });
+    }
+
+    // AI-based extraction using Claude
+    if (!aiExtractor) {
+      return res.status(503).json({
+        error: 'AI extraction not available. ANTHROPIC_API_KEY environment variable is not set.',
+      });
+    }
+
+    // Prepare images for AI extraction
+    const imageBuffers = files.map(file => ({
+      buffer: file.buffer,
+      mimeType: file.mimetype,
+    }));
+
+    const parsedRecipe = await aiExtractor.extractFromMultipleImages(imageBuffers);
+    console.log('AI extracted recipe from multiple images:', parsedRecipe);
+
+    if (!parsedRecipe.name || parsedRecipe.ingredients.length === 0) {
+      return res.status(400).json({
+        error: 'Could not identify recipe structure. Please ensure the images contain a clear recipe with ingredients.',
+        rawText: parsedRecipe.rawText || '',
+      });
+    }
+
+    // Match ingredients to database (but don't create new ones yet)
+    const ingredients = await Promise.all(
+      parsedRecipe.ingredients.map(async (ing) => {
+        const { id: ingredientId, defaultUnitId, isNew, matchedName } = await ingredientMatcher.matchIngredient(ing.name);
+        const unitId = await ingredientMatcher.matchUnit(ing.unit);
+
+        return {
+          ingredientId: ingredientId || 0,
+          quantity: ing.quantity || 0,
+          unitId,
+          originalText: ing.name,
+          isNew,
+          matchedName,
+        };
+      })
+    );
+
+    // Return structured data to frontend
+    res.json({
+      name: parsedRecipe.name,
+      description: parsedRecipe.description || '',
+      instructions: parsedRecipe.instructions || '',
+      prepTimeMinutes: parsedRecipe.prepTimeMinutes || 0,
+      cookTimeMinutes: parsedRecipe.cookTimeMinutes || 0,
+      servings: parsedRecipe.servings || 2,
+      ingredients,
+      confidence: parsedRecipe.confidence,
+      rawText: parsedRecipe.rawText || '',
+      method,
+    });
+
+  } catch (error: any) {
+    console.error('Error extracting recipe from photos:', error);
+    res.status(500).json({
+      error: 'Failed to process images',
+      details: error.message,
+    });
+  }
+});
+
 export default router;

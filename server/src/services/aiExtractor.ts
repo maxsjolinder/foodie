@@ -27,6 +27,103 @@ export class AIExtractor {
     this.client = new Anthropic({ apiKey });
   }
 
+  async extractFromMultipleImages(
+    imageBuffers: Array<{ buffer: Buffer; mimeType: string }>
+  ): Promise<ExtractedRecipe> {
+    try {
+      // Build content array with all images
+      const content: Array<any> = [];
+
+      // Add all images first
+      imageBuffers.forEach((img) => {
+        content.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: img.buffer.toString('base64'),
+          },
+        });
+      });
+
+      // Add instruction text at the end
+      content.push({
+        type: 'text',
+        text: `Extract recipe information from ${imageBuffers.length > 1 ? 'these images' : 'this image'} and return it as JSON.
+
+${imageBuffers.length > 1 ? 'IMPORTANT: These images show different parts of the SAME recipe (e.g., page 1 and page 2, or front and back of a recipe card). Combine all information from all images into a single complete recipe.' : ''}
+
+Return a JSON object with this exact structure:
+{
+  "name": "Recipe name",
+  "description": "Brief description if visible",
+  "instructions": "Step by step instructions as a single string (combine from all images if multiple)",
+  "prepTimeMinutes": number or null,
+  "cookTimeMinutes": number or null,
+  "servings": number or null,
+  "ingredients": [
+    {
+      "name": "ingredient name",
+      "quantity": number or null,
+      "unit": "unit name" or null
+    }
+  ],
+  "confidence": "high" | "medium" | "low",
+  "rawText": "All text extracted from ${imageBuffers.length > 1 ? 'all images' : 'the image'}"
+}
+
+Rules:
+- If no recipe is visible, return null
+- Parse quantities as numbers when possible
+- Use common units in Swedish when possible (g, kg, ml, dl, l, msk, tsk, st)
+- If text is unclear, include it in rawText
+- Set confidence based on image clarity (high = clear printed text, medium = somewhat unclear, low = handwritten or blurry)
+${imageBuffers.length > 1 ? '- COMBINE all ingredients from all images into one list (avoid duplicates)' : ''}
+${imageBuffers.length > 1 ? '- COMBINE all instructions from all images into one coherent set of steps' : ''}
+- Return ONLY the JSON object, no additional text
+
+IMPORTANT: Make sure all text from ${imageBuffers.length > 1 ? 'all images is' : 'the image is'} captured in the rawText field for user review.`,
+      });
+
+      const message = await this.client.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 3072, // Increased for multiple images
+        messages: [
+          {
+            role: 'user',
+            content,
+          },
+        ],
+      });
+
+      const textContent = message.content.find((c) => c.type === 'text');
+      if (!textContent || textContent.type !== 'text') {
+        throw new Error('No text response from Claude');
+      }
+
+      // Extract JSON from response
+      const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No valid JSON found in response');
+      }
+
+      const extracted = JSON.parse(jsonMatch[0]);
+
+      if (!extracted || extracted === null) {
+        throw new Error('No recipe found in images');
+      }
+
+      if (!extracted.name) {
+        throw new Error('Recipe name not found in images');
+      }
+
+      return extracted;
+    } catch (error: any) {
+      console.error('AI extraction error:', error);
+      throw new Error(`Failed to extract recipe with AI: ${error.message}`);
+    }
+  }
+
   async extractFromImage(imageBuffer: Buffer, mimeType: string): Promise<ExtractedRecipe> {
     try {
       const base64Image = imageBuffer.toString('base64');

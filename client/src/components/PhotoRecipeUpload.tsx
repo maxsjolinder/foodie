@@ -8,66 +8,155 @@ interface PhotoRecipeUploadProps {
 
 export default function PhotoRecipeUpload({ onExtracted, onCancel }: PhotoRecipeUploadProps) {
   const { t } = useTranslation();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string>('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [method, setMethod] = useState<'ocr' | 'ai'>('ocr');
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    // Validate file type
-    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
-      setError('Endast JPEG och PNG bilder är tillåtna');
-      return;
+    // Validate all files
+    for (const file of files) {
+      // Validate file type
+      if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+        setError(`${file.name}: Endast JPEG och PNG bilder är tillåtna`);
+        return;
+      }
+
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError(`${file.name}: Bilden är för stor. Max 10MB.`);
+        return;
+      }
     }
 
-    // Validate file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Bilden är för stor. Max 10MB.');
-      return;
-    }
-
-    setSelectedFile(file);
+    setSelectedFiles(files);
     setError('');
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Create previews for all files
+    const newPreviews: string[] = [];
+    files.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews[index] = reader.result as string;
+        if (newPreviews.filter(p => p).length === files.length) {
+          setPreviews(newPreviews);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleExtract = async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
 
     setIsProcessing(true);
     setError('');
+    setProcessingProgress('');
 
     try {
-      const formData = new FormData();
-      formData.append('photo', selectedFile);
+      // For AI method with multiple files: send all at once
+      if (method === 'ai' && selectedFiles.length > 1) {
+        setProcessingProgress(`Bearbetar alla ${selectedFiles.length} bilder samtidigt med AI...`);
 
-      const response = await fetch(`/api/recipes/extract-from-photo?method=${method}`, {
-        method: 'POST',
-        body: formData,
-      });
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+          formData.append('photos', file);
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Kunde inte läsa receptet');
+        const response = await fetch(`/api/recipes/extract-from-photos?method=ai`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Kunde inte läsa receptet');
+        }
+
+        const data = await response.json();
+        onExtracted(data);
+      } else {
+        // For single file or OCR: process files sequentially
+        const extractedDataArray = [];
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          setProcessingProgress(`Bearbetar bild ${i + 1} av ${selectedFiles.length}...`);
+
+          const formData = new FormData();
+          formData.append('photo', file);
+
+          const response = await fetch(`/api/recipes/extract-from-photo?method=${method}`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Kunde inte läsa bild ${i + 1}`);
+          }
+
+          const data = await response.json();
+          extractedDataArray.push(data);
+        }
+
+        // Combine results from multiple photos (for OCR)
+        const combinedData = combineExtractedData(extractedDataArray);
+        onExtracted(combinedData);
       }
-
-      const data = await response.json();
-      onExtracted(data);
     } catch (err: any) {
       setError(err.message || 'Ett fel uppstod vid bildbehandling');
     } finally {
       setIsProcessing(false);
+      setProcessingProgress('');
     }
+  };
+
+  const combineExtractedData = (dataArray: any[]) => {
+    if (dataArray.length === 1) {
+      return dataArray[0];
+    }
+
+    // Use the first photo's metadata as base
+    const combined = { ...dataArray[0] };
+
+    // Combine instructions from all photos
+    const allInstructions = dataArray
+      .map(d => d.instructions)
+      .filter(inst => inst && inst.trim().length > 0)
+      .join('\n\n');
+    combined.instructions = allInstructions;
+
+    // Merge ingredients (avoid duplicates)
+    const ingredientMap = new Map();
+    dataArray.forEach(data => {
+      if (data.ingredients) {
+        data.ingredients.forEach((ing: any) => {
+          const key = `${ing.ingredientId || ing.matchedName}-${ing.unitId}`;
+          if (ingredientMap.has(key)) {
+            // If ingredient exists, add quantities
+            const existing = ingredientMap.get(key);
+            existing.quantity += ing.quantity;
+          } else {
+            ingredientMap.set(key, { ...ing });
+          }
+        });
+      }
+    });
+    combined.ingredients = Array.from(ingredientMap.values());
+
+    // Combine descriptions
+    const allDescriptions = dataArray
+      .map(d => d.description)
+      .filter(desc => desc && desc.trim().length > 0)
+      .join(' ');
+    combined.description = allDescriptions;
+
+    return combined;
   };
 
   return (
@@ -119,12 +208,13 @@ export default function PhotoRecipeUpload({ onExtracted, onCancel }: PhotoRecipe
           {/* File input */}
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">
-              Välj bild av recept
+              Välj bilder av recept (en eller flera)
             </label>
             <input
               type="file"
               accept="image/jpeg,image/png,image/jpg"
               onChange={handleFileSelect}
+              multiple
               className="block w-full text-sm text-gray-500
                 file:mr-4 file:py-2 file:px-4
                 file:rounded-lg file:border-0
@@ -132,16 +222,30 @@ export default function PhotoRecipeUpload({ onExtracted, onCancel }: PhotoRecipe
                 file:bg-green-50 file:text-green-700
                 hover:file:bg-green-100"
             />
+            {selectedFiles.length > 0 && (
+              <p className="mt-1 text-sm text-gray-600">
+                {selectedFiles.length} {selectedFiles.length === 1 ? 'bild vald' : 'bilder valda'}
+              </p>
+            )}
           </div>
 
           {/* Preview */}
-          {preview && (
+          {previews.length > 0 && (
             <div className="mt-4">
-              <img
-                src={preview}
-                alt="Preview"
-                className="max-h-96 mx-auto rounded-lg border"
-              />
+              <div className={`grid gap-3 ${previews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                {previews.map((preview, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full max-h-64 object-contain rounded-lg border"
+                    />
+                    <span className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+                      {index + 1}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -163,10 +267,14 @@ export default function PhotoRecipeUpload({ onExtracted, onCancel }: PhotoRecipe
             </button>
             <button
               onClick={handleExtract}
-              disabled={!selectedFile || isProcessing}
+              disabled={selectedFiles.length === 0 || isProcessing}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {isProcessing ? 'Läser recept...' : 'Läs recept från foto'}
+              {isProcessing
+                ? 'Läser recept...'
+                : selectedFiles.length > 1
+                  ? `Läs recept från ${selectedFiles.length} foton`
+                  : 'Läs recept från foto'}
             </button>
           </div>
 
@@ -174,9 +282,16 @@ export default function PhotoRecipeUpload({ onExtracted, onCancel }: PhotoRecipe
           {isProcessing && (
             <div className="text-center text-sm text-gray-600">
               <div className="animate-pulse">
-                {method === 'ai'
-                  ? 'AI läser receptet... Detta kan ta 5-15 sekunder.'
-                  : 'OCR läser receptet... Detta kan ta 10-30 sekunder.'}
+                {processingProgress && <div className="font-semibold mb-1">{processingProgress}</div>}
+                <div>
+                  {method === 'ai'
+                    ? selectedFiles.length > 1
+                      ? 'AI analyserar alla bilder tillsammans... Detta kan ta 10-20 sekunder.'
+                      : 'AI läser receptet... Detta kan ta 5-15 sekunder.'
+                    : selectedFiles.length > 1
+                      ? 'OCR läser receptet... Detta kan ta 10-30 sekunder per bild.'
+                      : 'OCR läser receptet... Detta kan ta 10-30 sekunder.'}
+                </div>
               </div>
             </div>
           )}
