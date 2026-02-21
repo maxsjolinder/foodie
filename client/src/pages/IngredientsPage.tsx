@@ -44,8 +44,11 @@ function IngredientsPage() {
       try {
         await deleteIngredient(id);
         loadData();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error deleting ingredient:', error);
+        // Display error message to user
+        const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Ett fel uppstod vid borttagning av ingrediens';
+        alert(errorMessage);
       }
     }
   };

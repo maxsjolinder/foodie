@@ -72,8 +72,24 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const ingredientId = parseInt(id);
+
+    // Check if ingredient is used in any recipes
+    const usageCount = await prisma.recipeIngredient.count({
+      where: { ingredientId },
+    });
+
+    if (usageCount > 0) {
+      return res.status(400).json({
+        error: 'Kan inte ta bort ingrediens som används i recept',
+        message: `Denna ingrediens används i ${usageCount} recept. Ta bort recepten först eller välj en annan ingrediens.`,
+        usageCount,
+      });
+    }
+
+    // Safe to delete
     await prisma.ingredient.delete({
-      where: { id: parseInt(id) },
+      where: { id: ingredientId },
     });
     res.status(204).send();
   } catch (error) {
