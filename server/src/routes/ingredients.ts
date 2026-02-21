@@ -75,14 +75,35 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const ingredientId = parseInt(id);
 
     // Check if ingredient is used in any recipes
-    const usageCount = await prisma.recipeIngredient.count({
+    const recipesUsingIngredient = await prisma.recipeIngredient.findMany({
       where: { ingredientId },
+      include: {
+        recipe: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      take: 2, // Only fetch first 2 recipes for performance
     });
 
-    if (usageCount > 0) {
+    if (recipesUsingIngredient.length > 0) {
+      const usageCount = await prisma.recipeIngredient.count({
+        where: { ingredientId },
+      });
+
+      let message: string;
+      if (usageCount === 1) {
+        // Single recipe: show the recipe name
+        message = `Denna ingrediens används i receptet "${recipesUsingIngredient[0].recipe.name}". Ta bort receptet först eller välj en annan ingrediens.`;
+      } else {
+        // Multiple recipes: show first recipe name and indicate there are more
+        message = `Denna ingrediens används i bland annat "${recipesUsingIngredient[0].recipe.name}" (${usageCount} recept totalt). Ta bort recepten först eller välj en annan ingrediens.`;
+      }
+
       return res.status(400).json({
         error: 'Kan inte ta bort ingrediens som används i recept',
-        message: `Denna ingrediens används i ${usageCount} recept. Ta bort recepten först eller välj en annan ingrediens.`,
+        message,
         usageCount,
       });
     }
