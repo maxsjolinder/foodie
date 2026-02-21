@@ -91,15 +91,44 @@ export async function generateGroceryList(weekStart: Date): Promise<GroceryItem[
       });
     } catch (error) {
       console.error(`Error aggregating ingredient "${data.name}" (ID: ${ingredientId}):`, error);
-      // If aggregation fails, sum quantities without conversion
-      const totalQuantity = data.items.reduce((sum, item) => sum + item.quantity, 0);
-      groceryList.push({
-        ingredientId,
-        ingredientName: data.name,
-        quantity: totalQuantity,
-        unit: data.items[0].unit.name,
-        unitDisplayName: data.items[0].unit.displayName,
-      });
+
+      // If aggregation fails due to incompatible unit types, group by unit type
+      // and create separate entries for each
+      const itemsByUnitType = new Map<string, Array<{ quantity: number; unit: any }>>();
+
+      for (const item of data.items) {
+        const unitType = item.unit.unitType;
+        if (!itemsByUnitType.has(unitType)) {
+          itemsByUnitType.set(unitType, []);
+        }
+        itemsByUnitType.get(unitType)!.push(item);
+      }
+
+      // Create separate grocery list entries for each unit type
+      for (const [unitType, items] of itemsByUnitType.entries()) {
+        try {
+          // Try to aggregate within the same unit type
+          const aggregated = aggregateQuantities(items, allUnits);
+
+          groceryList.push({
+            ingredientId,
+            ingredientName: `⚠️ ${data.name} (${unitType})`, // Warning indicator with unit type
+            quantity: aggregated.quantity,
+            unit: aggregated.unit.name,
+            unitDisplayName: aggregated.unit.displayName,
+          });
+        } catch (innerError) {
+          // If even same unit type fails, just sum quantities
+          const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+          groceryList.push({
+            ingredientId,
+            ingredientName: `⚠️ ${data.name} (${items[0].unit.name})`,
+            quantity: totalQuantity,
+            unit: items[0].unit.name,
+            unitDisplayName: items[0].unit.displayName,
+          });
+        }
+      }
     }
   }
 
