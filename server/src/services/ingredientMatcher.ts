@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export class IngredientMatcher {
-  async matchIngredient(name: string): Promise<{ id: number; defaultUnitId: number }> {
+  async matchIngredient(name: string): Promise<{ id: number | null; defaultUnitId: number; isNew: boolean; matchedName: string }> {
     // Normalize name (lowercase, trim)
     const normalized = name.toLowerCase().trim();
 
@@ -21,19 +21,47 @@ export class IngredientMatcher {
       });
     }
 
-    // Create new ingredient if not found
+    // If not found, return placeholder info (don't create yet)
     if (!ingredient) {
       const defaultUnit = await prisma.unit.findFirst({ where: { name: 'st' } });
-      ingredient = await prisma.ingredient.create({
-        data: {
-          name: normalized,
-          defaultUnitId: defaultUnit!.id,
-        },
-        include: { defaultUnit: true },
-      });
+      return {
+        id: null, // null indicates this ingredient doesn't exist yet
+        defaultUnitId: defaultUnit!.id,
+        isNew: true,
+        matchedName: normalized
+      };
     }
 
-    return { id: ingredient.id, defaultUnitId: ingredient.defaultUnitId };
+    return {
+      id: ingredient.id,
+      defaultUnitId: ingredient.defaultUnitId,
+      isNew: false,
+      matchedName: ingredient.name
+    };
+  }
+
+  async createIngredient(name: string, defaultUnitId?: number): Promise<number> {
+    const normalized = name.toLowerCase().trim();
+
+    // Check if it already exists (in case of race condition)
+    const existing = await prisma.ingredient.findFirst({
+      where: { name: { equals: normalized, mode: 'insensitive' } },
+    });
+
+    if (existing) {
+      return existing.id;
+    }
+
+    // Create new ingredient
+    const unitId = defaultUnitId || (await prisma.unit.findFirst({ where: { name: 'st' } }))!.id;
+    const ingredient = await prisma.ingredient.create({
+      data: {
+        name: normalized,
+        defaultUnitId: unitId,
+      },
+    });
+
+    return ingredient.id;
   }
 
   async matchUnit(unitName: string | undefined): Promise<number> {

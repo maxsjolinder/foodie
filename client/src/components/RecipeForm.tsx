@@ -6,6 +6,8 @@ interface RecipeIngredientInput {
   ingredientId: number;
   quantity: number;
   unitId: number;
+  isNew?: boolean; // Flag to indicate if ingredient was just created from photo extraction
+  matchedName?: string; // The actual ingredient name from database
 }
 
 interface RecipeFormProps {
@@ -80,6 +82,12 @@ function RecipeForm({ ingredients, units, recipe, initialData, onSubmit, onCance
   const updateIngredient = (index: number, field: keyof RecipeIngredientInput, value: number) => {
     const updated = [...recipeIngredients];
     updated[index] = { ...updated[index], [field]: value };
+    setRecipeIngredients(updated);
+  };
+
+  const updateIngredientName = (index: number, name: string) => {
+    const updated = [...recipeIngredients];
+    updated[index] = { ...updated[index], matchedName: name };
     setRecipeIngredients(updated);
   };
 
@@ -185,19 +193,39 @@ function RecipeForm({ ingredients, units, recipe, initialData, onSubmit, onCance
           <div className="space-y-2">
             {recipeIngredients.map((ri, index) => (
               <div key={index} className="flex gap-2 items-center">
-                <select
-                  value={ri.ingredientId}
-                  onChange={(e) => updateIngredient(index, 'ingredientId', parseInt(e.target.value))}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
-                  required
-                >
-                  <option value={0}>Välj ingrediens</option>
-                  {ingredients.map((ing) => (
-                    <option key={ing.id} value={ing.id}>
-                      {ing.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1 flex items-center gap-2">
+                  {ri.isNew && ri.ingredientId === 0 ? (
+                    // New ingredient: show text input for editing name
+                    <>
+                      <input
+                        type="text"
+                        value={ri.matchedName || ''}
+                        onChange={(e) => updateIngredientName(index, e.target.value)}
+                        placeholder="Ingrediensnamn"
+                        className="flex-1 px-3 py-2 border-2 border-green-300 rounded-md bg-green-50"
+                        required
+                      />
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded whitespace-nowrap">
+                        Ny
+                      </span>
+                    </>
+                  ) : (
+                    // Existing ingredient: show dropdown
+                    <select
+                      value={ri.ingredientId}
+                      onChange={(e) => updateIngredient(index, 'ingredientId', parseInt(e.target.value))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    >
+                      <option value={0}>Välj ingrediens</option>
+                      {ingredients.map((ing) => (
+                        <option key={ing.id} value={ing.id}>
+                          {ing.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
                 <input
                   type="number"
                   step="0.01"

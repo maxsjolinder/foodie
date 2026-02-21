@@ -46,7 +46,8 @@ function RecipesPage() {
       }
       setShowForm(false);
       setSelectedRecipe(null);
-      loadData();
+      setExtractedData(null);
+      loadData(); // This will reload both recipes AND ingredients
     } catch (error) {
       console.error('Error saving recipe:', error);
     }
@@ -68,7 +69,7 @@ function RecipesPage() {
     }
   };
 
-  const handlePhotoExtracted = (data: any) => {
+  const handlePhotoExtracted = async (data: any) => {
     setShowPhotoUpload(false);
     setExtractedData(data);
     setSelectedRecipe(null);

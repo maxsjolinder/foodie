@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { IngredientMatcher } from '../services/ingredientMatcher';
 
 const router = Router();
 const prisma = new PrismaClient();
+const ingredientMatcher = new IngredientMatcher();
 
 // GET /api/recipes - List all recipes
 router.get('/', async (req: Request, res: Response) => {
@@ -59,6 +61,27 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, description, instructions, prepTimeMinutes, cookTimeMinutes, servings, ingredients } = req.body;
 
+    // Create any new ingredients first (those with ingredientId === 0)
+    const processedIngredients = await Promise.all(
+      ingredients.map(async (ing: any) => {
+        if (ing.ingredientId === 0 && ing.isNew && ing.matchedName) {
+          // Create the new ingredient
+          const newIngredientId = await ingredientMatcher.createIngredient(ing.matchedName, ing.unitId);
+          return {
+            ingredientId: newIngredientId,
+            quantity: ing.quantity,
+            unitId: ing.unitId,
+          };
+        }
+        // Existing ingredient, use as-is
+        return {
+          ingredientId: ing.ingredientId,
+          quantity: ing.quantity,
+          unitId: ing.unitId,
+        };
+      })
+    );
+
     const recipe = await prisma.recipe.create({
       data: {
         name,
@@ -68,11 +91,7 @@ router.post('/', async (req: Request, res: Response) => {
         cookTimeMinutes,
         servings,
         ingredients: {
-          create: ingredients.map((ing: any) => ({
-            ingredientId: ing.ingredientId,
-            quantity: ing.quantity,
-            unitId: ing.unitId,
-          })),
+          create: processedIngredients,
         },
       },
       include: {
@@ -98,6 +117,27 @@ router.put('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, description, instructions, prepTimeMinutes, cookTimeMinutes, servings, ingredients } = req.body;
 
+    // Create any new ingredients first (those with ingredientId === 0)
+    const processedIngredients = await Promise.all(
+      ingredients.map(async (ing: any) => {
+        if (ing.ingredientId === 0 && ing.isNew && ing.matchedName) {
+          // Create the new ingredient
+          const newIngredientId = await ingredientMatcher.createIngredient(ing.matchedName, ing.unitId);
+          return {
+            ingredientId: newIngredientId,
+            quantity: ing.quantity,
+            unitId: ing.unitId,
+          };
+        }
+        // Existing ingredient, use as-is
+        return {
+          ingredientId: ing.ingredientId,
+          quantity: ing.quantity,
+          unitId: ing.unitId,
+        };
+      })
+    );
+
     // Delete existing ingredients
     await prisma.recipeIngredient.deleteMany({
       where: { recipeId: parseInt(id) },
@@ -114,11 +154,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         cookTimeMinutes,
         servings,
         ingredients: {
-          create: ingredients.map((ing: any) => ({
-            ingredientId: ing.ingredientId,
-            quantity: ing.quantity,
-            unitId: ing.unitId,
-          })),
+          create: processedIngredients,
         },
       },
       include: {

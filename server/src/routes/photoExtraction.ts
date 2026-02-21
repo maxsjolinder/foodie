@@ -77,17 +77,19 @@ router.post('/extract-from-photo', upload.single('photo'), async (req: Request, 
       });
     }
 
-    // Match ingredients to database
+    // Match ingredients to database (but don't create new ones yet)
     const ingredients = await Promise.all(
       parsedRecipe.ingredients.map(async (ing) => {
-        const { id: ingredientId, defaultUnitId } = await ingredientMatcher.matchIngredient(ing.name);
+        const { id: ingredientId, defaultUnitId, isNew, matchedName } = await ingredientMatcher.matchIngredient(ing.name);
         const unitId = await ingredientMatcher.matchUnit(ing.unit);
 
         return {
-          ingredientId,
+          ingredientId: ingredientId || 0, // 0 indicates ingredient needs to be created on save
           quantity: ing.quantity || 0,
           unitId,
           originalText: ing.name, // Keep for user review
+          isNew, // Flag to indicate ingredient needs to be created
+          matchedName, // The ingredient name that will be used
         };
       })
     );
