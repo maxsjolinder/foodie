@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { getRecipes, getIngredients, getUnits, createRecipe, updateRecipe, deleteRecipe } from '../services/api';
 import { Recipe, Ingredient, Unit } from '../services/types';
 import RecipeForm from '../components/RecipeForm';
+import PhotoRecipeUpload from '../components/PhotoRecipeUpload';
 
 function RecipesPage() {
   const { t } = useTranslation();
@@ -12,6 +13,8 @@ function RecipesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -65,6 +68,13 @@ function RecipesPage() {
     }
   };
 
+  const handlePhotoExtracted = (data: any) => {
+    setShowPhotoUpload(false);
+    setExtractedData(data);
+    setSelectedRecipe(null);
+    setShowForm(true);
+  };
+
   if (loading) {
     return <div className="text-center py-8">{t('common.loading')}</div>;
   }
@@ -73,20 +83,24 @@ function RecipesPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">{t('recipes.title')}</h1>
-        <button
-          onClick={() => {
-            if (showForm) {
-              setShowForm(false);
-              setSelectedRecipe(null);
-            } else {
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              setExtractedData(null);
               setSelectedRecipe(null);
               setShowForm(true);
-            }
-          }}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-        >
-          {showForm ? t('common.close') : t('recipes.createNew')}
-        </button>
+            }}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+          >
+            {t('recipes.createNew')}
+          </button>
+          <button
+            onClick={() => setShowPhotoUpload(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            📷 Skapa från foto
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -98,10 +112,12 @@ function RecipesPage() {
             ingredients={ingredients}
             units={units}
             recipe={selectedRecipe || undefined}
+            initialData={extractedData}
             onSubmit={handleSubmit}
             onCancel={() => {
               setShowForm(false);
               setSelectedRecipe(null);
+              setExtractedData(null);
             }}
           />
         </div>
@@ -166,6 +182,13 @@ function RecipesPage() {
           ))
         )}
       </div>
+
+      {showPhotoUpload && (
+        <PhotoRecipeUpload
+          onExtracted={handlePhotoExtracted}
+          onCancel={() => setShowPhotoUpload(false)}
+        />
+      )}
     </div>
   );
 }

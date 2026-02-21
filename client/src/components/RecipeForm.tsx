@@ -12,6 +12,15 @@ interface RecipeFormProps {
   ingredients: Ingredient[];
   units: Unit[];
   recipe?: Recipe;
+  initialData?: {
+    name?: string;
+    description?: string;
+    instructions?: string;
+    prepTimeMinutes?: number;
+    cookTimeMinutes?: number;
+    servings?: number;
+    ingredients?: RecipeIngredientInput[];
+  };
   onSubmit: (data: {
     name: string;
     description: string;
@@ -24,7 +33,7 @@ interface RecipeFormProps {
   onCancel: () => void;
 }
 
-function RecipeForm({ ingredients, units, recipe, onSubmit, onCancel }: RecipeFormProps) {
+function RecipeForm({ ingredients, units, recipe, initialData, onSubmit, onCancel }: RecipeFormProps) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: recipe?.name || '',
@@ -42,6 +51,23 @@ function RecipeForm({ ingredients, units, recipe, onSubmit, onCancel }: RecipeFo
       unitId: ri.unitId,
     })) || []
   );
+
+  // Handle initialData from photo extraction
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        description: initialData.description || '',
+        instructions: initialData.instructions || '',
+        prepTimeMinutes: initialData.prepTimeMinutes || 0,
+        cookTimeMinutes: initialData.cookTimeMinutes || 0,
+        servings: initialData.servings || 2,
+      });
+      if (initialData.ingredients) {
+        setRecipeIngredients(initialData.ingredients);
+      }
+    }
+  }, [initialData]);
 
   const addIngredient = () => {
     setRecipeIngredients([...recipeIngredients, { ingredientId: 0, quantity: 0, unitId: 0 }]);

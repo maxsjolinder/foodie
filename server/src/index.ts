@@ -7,6 +7,7 @@ import mealPlansRouter from './routes/mealPlans';
 import groceryListRouter from './routes/groceryList';
 import mealTypesRouter from './routes/mealTypes';
 import unitsRouter from './routes/units';
+import photoExtractionRouter from './routes/photoExtraction';
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API routes
 app.use('/api/recipes', recipesRouter);
+app.use('/api/recipes', photoExtractionRouter);
 app.use('/api/ingredients', ingredientsRouter);
 app.use('/api/meal-plans', mealPlansRouter);
 app.use('/api/grocery-list', groceryListRouter);

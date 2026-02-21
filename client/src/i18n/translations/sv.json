@@ -12,6 +12,7 @@
   "recipes": {
     "title": "Recept",
     "createNew": "Skapa nytt recept",
+    "createFromPhoto": "Skapa från foto",
     "edit": "Redigera recept",
     "delete": "Ta bort recept",
     "deleteConfirm": "Är du säker på att du vill ta bort detta recept?",
@@ -28,7 +29,12 @@
     "unit": "Enhet",
     "save": "Spara",
     "cancel": "Avbryt",
-    "noRecipes": "Inga recept ännu. Skapa ditt första recept!"
+    "noRecipes": "Inga recept ännu. Skapa ditt första recept!",
+    "uploadPhoto": "Ladda upp foto",
+    "photoProcessing": "Läser recept från foto...",
+    "photoError": "Kunde inte läsa receptet från bilden",
+    "photoSuccess": "Recept extraherat! Granska och redigera innan du sparar.",
+    "lowConfidence": "Bildkvaliteten var låg. Kontrollera att all information stämmer."
   },
   "planning": {
     "title": "Måltidsplanering",
