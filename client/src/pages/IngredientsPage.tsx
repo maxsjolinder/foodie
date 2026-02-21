@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getIngredients, getUnits, createIngredient, deleteIngredient } from '../services/api';
+import { getIngredients, getUnits, createIngredient, updateIngredient, deleteIngredient } from '../services/api';
 import { Ingredient, Unit } from '../services/types';
 
 function IngredientsPage() {
@@ -9,7 +9,8 @@ function IngredientsPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [newIngredient, setNewIngredient] = useState({ name: '', defaultUnitId: 0 });
+  const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
+  const [formData, setFormData] = useState({ name: '', defaultUnitId: 0 });
 
   useEffect(() => {
     loadData();
@@ -27,16 +28,36 @@ function IngredientsPage() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createIngredient(newIngredient);
-      setNewIngredient({ name: '', defaultUnitId: 0 });
+      if (editingIngredient) {
+        await updateIngredient(editingIngredient.id, formData);
+      } else {
+        await createIngredient(formData);
+      }
+      setFormData({ name: '', defaultUnitId: 0 });
+      setEditingIngredient(null);
       setShowForm(false);
       loadData();
     } catch (error) {
-      console.error('Error creating ingredient:', error);
+      console.error('Error saving ingredient:', error);
     }
+  };
+
+  const handleEdit = (ingredient: Ingredient) => {
+    setEditingIngredient(ingredient);
+    setFormData({
+      name: ingredient.name,
+      defaultUnitId: ingredient.defaultUnitId,
+    });
+    setShowForm(true);
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingIngredient(null);
+    setFormData({ name: '', defaultUnitId: 0 });
   };
 
   const handleDelete = async (id: number) => {
@@ -62,16 +83,27 @@ function IngredientsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">{t('ingredients.title')}</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm && !editingIngredient) {
+              setShowForm(false);
+            } else {
+              setEditingIngredient(null);
+              setFormData({ name: '', defaultUnitId: 0 });
+              setShowForm(!showForm);
+            }
+          }}
           className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
         >
-          {showForm ? t('common.close') : t('ingredients.createNew')}
+          {showForm && !editingIngredient ? t('common.close') : t('ingredients.createNew')}
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <form onSubmit={handleCreate}>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            {editingIngredient ? t('ingredients.edit') : t('ingredients.createNew')}
+          </h2>
+          <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -79,8 +111,8 @@ function IngredientsPage() {
                 </label>
                 <input
                   type="text"
-                  value={newIngredient.name}
-                  onChange={(e) => setNewIngredient({ ...newIngredient, name: e.target.value })}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   required
                 />
@@ -90,9 +122,9 @@ function IngredientsPage() {
                   {t('ingredients.defaultUnit')}
                 </label>
                 <select
-                  value={newIngredient.defaultUnitId}
+                  value={formData.defaultUnitId}
                   onChange={(e) =>
-                    setNewIngredient({ ...newIngredient, defaultUnitId: parseInt(e.target.value) })
+                    setFormData({ ...formData, defaultUnitId: parseInt(e.target.value) })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   required
@@ -109,7 +141,7 @@ function IngredientsPage() {
             <div className="flex justify-end mt-4 space-x-2">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={handleCancel}
                 className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
               >
                 {t('common.cancel')}
@@ -138,12 +170,20 @@ function IngredientsPage() {
                     {ingredient.defaultUnit.displayName} ({ingredient.defaultUnit.name})
                   </p>
                 </div>
-                <button
-                  onClick={() => handleDelete(ingredient.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  {t('ingredients.delete')}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(ingredient)}
+                    className="text-green-600 hover:text-green-800 px-3 py-1 border border-green-300 rounded hover:bg-green-50"
+                  >
+                    {t('ingredients.edit')}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(ingredient.id)}
+                    className="text-red-600 hover:text-red-800 px-3 py-1 border border-red-300 rounded hover:bg-red-50"
+                  >
+                    {t('ingredients.delete')}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
