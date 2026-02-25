@@ -72,7 +72,7 @@ foodie/
 - **Ingredient** - Food items with default unit
 - **Recipe** - Recipes with ingredients, times, servings
 - **RecipeIngredient** - Join table for recipe ingredients
-- **MealType** - Frukost, Lunch, Middag, Mellanmål
+- **MealType** - Lunch, Middag
 - **MealPlan** - Scheduled meals with date, portions, cooked status
 
 ## API Endpoints

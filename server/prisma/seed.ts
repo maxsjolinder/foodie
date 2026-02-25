@@ -39,10 +39,8 @@ async function main() {
   // Seed Meal Types
   console.log('Creating meal types...');
   const mealTypes = [
-    { name: 'Frukost', sortOrder: 1 },
-    { name: 'Lunch', sortOrder: 2 },
-    { name: 'Middag', sortOrder: 3 },
-    { name: 'Mellanmål', sortOrder: 4 },
+    { name: 'Lunch', sortOrder: 1 },
+    { name: 'Middag', sortOrder: 2 },
   ];
 
   for (const mealType of mealTypes) {
