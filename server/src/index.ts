@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import recipesRouter from './routes/recipes';
 import ingredientsRouter from './routes/ingredients';
 import mealPlansRouter from './routes/mealPlans';
@@ -34,6 +35,15 @@ app.use('/api/meal-plans', mealPlansRouter);
 app.use('/api/grocery-list', groceryListRouter);
 app.use('/api/meal-types', mealTypesRouter);
 app.use('/api/units', unitsRouter);
+
+// Serve React frontend in production
+if (process.env.NODE_ENV === 'production') {
+  const clientBuild = path.join(__dirname, '../public');
+  app.use(express.static(clientBuild));
+  app.get('*', (_req: Request, res: Response) => {
+    res.sendFile(path.join(clientBuild, 'index.html'));
+  });
+}
 
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);

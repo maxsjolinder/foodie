@@ -79,7 +79,7 @@ router.post('/extract-from-photo', upload.single('photo'), async (req: Request, 
 
     // Match ingredients to database (but don't create new ones yet)
     const ingredients = await Promise.all(
-      parsedRecipe.ingredients.map(async (ing) => {
+      parsedRecipe.ingredients.map(async (ing: { name: string; quantity?: number; unit?: string }) => {
         const { id: ingredientId, defaultUnitId, isNew, matchedName } = await ingredientMatcher.matchIngredient(ing.name);
         const unitId = await ingredientMatcher.matchUnit(ing.unit);
 
@@ -159,7 +159,7 @@ router.post('/extract-from-photos', upload.array('photos', 5), async (req: Reque
 
     // Match ingredients to database (but don't create new ones yet)
     const ingredients = await Promise.all(
-      parsedRecipe.ingredients.map(async (ing) => {
+      parsedRecipe.ingredients.map(async (ing: { name: string; quantity?: number; unit?: string }) => {
         const { id: ingredientId, defaultUnitId, isNew, matchedName } = await ingredientMatcher.matchIngredient(ing.name);
         const unitId = await ingredientMatcher.matchUnit(ing.unit);
 
