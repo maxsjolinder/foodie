@@ -95,3 +95,15 @@ NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 ANTHROPIC_API_KEY=sk-ant-xxxxx  # Optional, for AI extraction
 ```
+
+**Production environment variables** (`.env` in project root, not committed):
+```
+DATABASE_URL=postgresql://username:password@host:5432/foodie
+CLIENT_URL=http://your-server-ip:3000
+APP_PORT=3000
+ANTHROPIC_API_KEY=sk-ant-xxxxx  # Optional
+```
+
+**Notes:**
+- In production, Express serves the built React app as static files (`server/public/`)
+- Prisma migrations are tracked in git and are available to the container at build time
