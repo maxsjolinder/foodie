@@ -35,8 +35,5 @@ Thumbs.db
 *.swo
 *~
 
-# Prisma
-server/prisma/migrations/
-
 # Build outputs
 *.tsbuildinfo
